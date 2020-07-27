@@ -1,0 +1,124 @@
+
+-- 今天
+select t.roomid from bas_anchoronline t where t.isdelete = 0 
+and ((
+onlinedate >= date_format(curdate(),'%Y-%m-%d 00:00:00')
+and IFNULL(offlinedate,NOW()) <= date_format(curdate(),'%Y-%m-%d 23:59:59'))
+or
+(onlinedate < date_format(curdate(),'%Y-%m-%d 00:00:00')
+and offlinedate IS NOT NULL AND offlinedate > date_format(curdate(),'%Y-%m-%d 00:00:00')))
+ORDER BY t.onlinedate desc;
+
+-- 昨天
+select t.roomid from bas_anchoronline t where t.isdelete = 0 
+and ((
+onlinedate >= date_format(date_sub(curdate(), interval 1 day),'%Y-%m-%d 00:00:00')
+and IFNULL(offlinedate,NOW()) <= date_format(date_sub(curdate(), interval 1 day),'%Y-%m-%d 23:59:59'))
+or
+(onlinedate < date_format(date_sub(curdate(), interval 1 day),'%Y-%m-%d 00:00:00')
+and offlinedate IS NOT NULL AND offlinedate > date_format(date_sub(curdate(), interval 1 day),'%Y-%m-%d 00:00:00')))
+ORDER BY t.onlinedate desc;
+
+
+-- 近七天
+select t.roomid from bas_anchoronline t where t.isdelete = 0 
+and ((
+onlinedate >= date_format(date_sub(curdate(), interval 6 day),'%Y-%m-%d 00:00:00')
+and IFNULL(offlinedate,NOW()) <= date_format(curdate(),'%Y-%m-%d 23:59:59'))
+or
+(onlinedate < date_format(date_sub(curdate(), interval 6 day),'%Y-%m-%d 00:00:00')
+and offlinedate IS NOT NULL AND offlinedate > date_format(date_sub(curdate(), interval 6 day),'%Y-%m-%d 00:00:00')))
+ORDER BY t.onlinedate desc;
+
+-- 本月
+select t.roomid from bas_anchoronline t where t.isdelete = 0 
+and ((
+onlinedate >= date_format(curdate(),'%Y-%m-01 00:00:00')
+and IFNULL(offlinedate,NOW()) <= CONCAT(last_day(curdate()),' 23:59:59'))
+or
+(onlinedate < date_format(curdate(),'%Y-%m-01 00:00:00')
+and offlinedate IS NOT NULL AND offlinedate > date_format(curdate(),'%Y-%m-01 00:00:00')))
+ORDER BY t.onlinedate desc;
+
+
+-- 上月
+select t.roomid,t.* from bas_anchoronline t where t.isdelete = 0 
+and ((
+onlinedate >= date_format(date_sub(curdate(), interval 1 month),'%Y-%m-01 00:00:00')
+and IFNULL(offlinedate,NOW()) <= CONCAT(last_day(date_sub(curdate(), interval 1 month)),' 23:59:59'))
+or
+(onlinedate <date_format(date_sub(curdate(), interval 1 month),'%Y-%m-01 00:00:00')
+and offlinedate IS NOT NULL AND offlinedate > date_format(date_sub(curdate(), interval 1 month),'%Y-%m-01 00:00:00')))
+ORDER BY t.onlinedate desc;
+
+
+
+
+
+
+
+
+#截取拼接
+
+SELECT
+	tt.redpacketid,
+	tt.packetname AS '红包名称',
+	concat(
+		substr(tt.startdate, 1, 10),
+		' ',
+		substr(tt.enddate, 1, 10)
+	) AS '开始时间',
+	concat(tt.starttime,' ',tt.endtime) AS '结束时间',
+	tt.dayamt AS '每日金额',
+	sum(t2.packetamt) AS '已抢金额',
+	(
+		datediff(tt.enddate, tt.startdate) + 1
+	) * tt.dayamt AS '红包总额',
+	datediff(tt.enddate, tt.startdate) + 1 AS '设置天数',
+	count(t2.packetamt) AS '已抢次数'
+FROM
+	(
+		SELECT
+			*
+		FROM
+			red_packets t1
+		WHERE
+			t1.isdelete = 0
+	) AS tt
+LEFT JOIN red_orderinfo t2 ON tt.redpacketid = t2.redpacketid
+GROUP BY
+	tt.redpacketid;
+
+
+
+
+ifnull:
+
+SELECT
+	tt.redpacketid,
+	tt.packetname AS '红包名称',
+	tt.packetseatid AS '红包位置',
+	substr(tt.startdate, 1, 10) AS '开始时间',
+	substr(tt.enddate, 1, 10) AS '结束时间',
+	tt.starttime AS '抢红包开始时间',
+	tt.endtime AS '抢红包结束时间',
+	tt.dayamt AS '每日金额',
+	ifnull(sum(t2.packetamt), 0) AS '已抢金额',
+	(
+		datediff(tt.enddate, tt.startdate) + 1
+	) * tt.dayamt AS '红包总额',
+	datediff(tt.enddate, tt.startdate) + 1 AS '设置天数',
+	count(t2.packetamt) AS '已抢次数'
+FROM
+	(
+		SELECT
+			*
+		FROM
+			red_packets t1
+		WHERE
+			t1.isdelete = 0
+	) AS tt
+LEFT JOIN red_orderinfo t2 ON tt.redpacketid = t2.redpacketid
+GROUP BY
+	tt.redpacketid;
+
