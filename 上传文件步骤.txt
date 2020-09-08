@@ -1,0 +1,5 @@
+git add 文件
+git commit -m '上传备注'
+git remote add origin 你的仓库地址
+git pull --rebase origin master
+git push -u origin master
