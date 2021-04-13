@@ -1,0 +1,78 @@
+*** Settings ***
+Library           RequestsLibrary
+Library           DatabaseLibrary
+
+*** Variables ***
+@{loginid}        abing1    dc483e80a7a0bd9ef71d8cf973673924    c33367701511b4f6020ec61ded352059
+${URL}            https://gw.liveuat.com
+&{headers}        Content-Type=application/x-www-form-urlencoded
+@{user}           tel=13055551016    password=c33367701511b4f6020ec61ded352059
+
+*** Keywords ***
+登录后台
+    open browser    http://admin.liveuat.com    chrome
+    sleep    2
+    input text    //*[@placeholder="用户名"]    ${login}[0]
+    input text    //*[@placeholder="密码"]    ${login}[1]
+    Wait Until Element Is Visible    //span[text()="登录"]
+    click element    //span[text()="登录"]
+
+接口_登录并获取token
+    ${headers}    create dictionary    Content-Type=application/json;charset=utf-8
+    ${rs}    create session    test    ${URL}    ${headers}
+    ${params}    create dictionary    acclogin=abing    password=e10adc3949ba59abbe56e057f20f883e
+    ${login}    post request    test    happyrunlogin/manage/login    params=${params}
+    ${reponsedata}    to json    ${login.content}
+    #断言登陆成功
+    should be equal as strings    ${login.status_code}    200
+    ${headers}    create dictionary    acctoken=${reponsedata['data']['acctoken']}
+    ${familyList}    get request    test    happyrun/family/allFamilyList    ${headers}
+
+百度搜索
+    [Arguments]    ${content}
+    open browser    http://www.baidu.com    chrome
+    Wait Until Element Is Visible    id = kw
+    input text    id = kw    ${content}
+    click element    id = su
+    sleep    1
+    Comment    close browser
+
+setUp
+    Connect To Database Using Custom Params    pymysql    host='db.liveuat.com',port=3306,user='kf_live',password='gOwVRIt3K2WExe6O',database='live'
+
+tearDown
+    Disconnect From Database
+    #账号退出
+    ${loginout}    post request    test    happyrun/logout
+    ${out}    to json    ${loginout.content}
+    #断言登出成功
+    should be equal as strings    ${out['message']}    登出成功
+
+登录后台并连接库-接口
+    comment    登录成功
+    ${headers1}    create dictionary    Content-Type=application/json;charset=utf-8
+    create session    test    ${URL}    ${headers1}
+    ${params}    create dictionary    acclogin=${loginid}[0]    password=${loginid}[1]
+    ${loginin}    post request    test    livelogin/manage/login    params=${params}
+    ${responsedata}    to json    ${loginin.content}
+    should be equal as strings    ${responsedata['info']}    成功
+    ${head}    create dictionary    acctoken=${responsedata['data']['acctoken']}
+    Set Global Variable    ${head}
+    Connect To Database Using Custom Params    pymysql    host='db.liveuat.com',port=3306,user='kf_live',password='gOwVRIt3K2WExe6O',database='live'
+
+接口_删除代理设置
+    ${var1}    Set Variable    新建代理设置
+    ${var2}    Set Variable    编辑代理设置
+    ${sql}    query    SELECT t.agentid from sys_agentinfo t where t.is_delete = 0 and t.agentname = '${var1}' or t.agentname = '${var2}';
+    ${agentid}    Set Variable    ${sql[0][0]}
+    ${params}    Create Dictionary    agentid=${agentid}
+    ${res}    Get Request    test    manage/agent/doDel    params=${params}    headers=${head}
+    ${res1}    to json    ${res.content}
+    Should Be Equal As Strings    ${res1['info']}    成功
+
+接口_新建代理设置
+    ${var}    Set Variable    新建代理设置
+    ${params2}    Create Dictionary    agentname=${var}    minamt=100    maxamt=2000    commission=5    sortby=99
+    ${res2}    Post Request    test    manage/agent/doAdd    params=${params2}    headers=${head}
+    ${response2}    to json    ${res2.content}
+    Should Be Equal As Strings    ${response2['info']}    成功
